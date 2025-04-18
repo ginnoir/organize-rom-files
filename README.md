@@ -1,4 +1,4 @@
-# organize_game_files.sh
+# organize-rom-files.sh
 
 A powerful Bash script to organize, validate, and generate playlists and metadata for disc-based and cartridge-based video game ROMs. Supports PlayStation, Sega CD, SNES, NES, GBA, and more.
 
