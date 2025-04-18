@@ -1,4 +1,4 @@
-# organize-rom-files.sh
+# organize_game_files.sh
 
 A powerful Bash script to organize, validate, and generate playlists and metadata for disc-based and cartridge-based video game ROMs. Supports PlayStation, Sega CD, SNES, NES, GBA, and more.
 
@@ -34,6 +34,11 @@ A powerful Bash script to organize, validate, and generate playlists and metadat
 | `--move-playlists`     | Place `.m3u` inside game folders |
 | `--include-single-disc`| Treat single-disc games like multi-disc for folder/playlist handling |
 | `--include-cartridges` | Include ROMs like `.gba`, `.smc`, etc. for metadata and optional organization |
+|                        |                                            |
+| **Folder Routing Logic** |                                           |
+| (Default)              | Only multi-disc games are moved to `gamediscs/` |
+| `--include-single-disc` only | All games moved to `gamediscs/` |
+| `--per-game-folders`   | All disc games get their own folder (overrides others) |
 
 ---
 
@@ -107,6 +112,7 @@ A powerful Bash script to organize, validate, and generate playlists and metadat
 | **v2.2** | Single-disc playlist option |
 | **v2.3** | Fuzzy multi-disc detection |
 | **v3.0** | Full cartridge ROM support with system-level metadata |
+| **v3.1** | Smart folder routing: `per-game` vs `gamediscs` based on flags |
 
 ---
 
