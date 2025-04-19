@@ -1,4 +1,4 @@
-# organize_game_files.sh
+# organize-rom-files.sh
 
 This Bash script organizes disc-based video game ROMs into structured folders with optional playlist (`.m3u`/`.m3u8`) generation, metadata files, cue path rewriting, and more. It supports CHD, BIN/CUE, CCD/IMG/SUB, and ISO formats, and intelligently groups multi-disc games while optionally including single-disc and cartridge-based ROMs.
 
