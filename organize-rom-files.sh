@@ -23,6 +23,7 @@ AGGRESSIVE_DETECTION=0
 VERIFY_PLAYLISTS=0
 GENERATE_ES_METADATA=0
 GENERATE_RA_METADATA=0
+DUPLICATE_M3U8=0
 LOG_FILE=organize-rom-files.log
 
 
@@ -55,6 +56,7 @@ Options:
   --verify-playlists       Attempt to launch each .m3u file in RetroArch to test validity
   --generate_es_metadata  Generate gamelist.xml files for use with EmulationStation
   --generate_ra_metadata  Generate .lpl playlists for use with RetroArch
+  --duplicate-m3u8		  If a title has non-ASCII characters, the script generates an m3u8 instead of an m3u. This creates both for compatibility.
   --help, -h              Show this help menu
 
 Examples:
@@ -89,6 +91,7 @@ for arg in "$@"; do
         --sort-m3u-by-disc) SORT_M3U_BY_DISC=1 ;;
 		--generate_es_metadata) GENERATE_ES_METADATA=1 ;;
 		--generate_ra_metadata) GENERATE_RA_METADATA=1 ;;
+		--duplicate-m3u8) DUPLICATE_M3U8=1 ;;
         --help|-h) show_help; exit 0 ;;
 	esac
 done
@@ -485,7 +488,23 @@ echo; echo "[*] Processing..."
 
 for key in "${!game_groups[@]}"; do
     IFS=$'\n' read -r -d '' -a all_files < <(printf '%s\0' "${game_groups[$key]}" | sort -Vz)
-    [ "${#all_files[@]}" -lt 2 ] && continue
+if [[ "${#all_files[@]}" -gt 1 ]]; then
+    only_single_disc=1
+    for f in "${all_files[@]}"; do
+        if [[ "$f" =~ \(Disc[[:space:]]*[0-9]+\) ]]; then
+            only_single_disc=0
+            break
+        fi
+    done
+    if [[ "$only_single_disc" -eq 1 ]]; then
+        echo
+        echo "[!] Multiple single-disc variants found for '$key'. Skipping playlist generation."
+        continue
+    fi
+fi
+if [ "${#all_files[@]}" -lt 2 ] && [ "$INCLUDE_SINGLE_DISC" -ne 1 ]; then
+    continue
+fi
 
     name="$key"
     [ "$CLEAN_NAMES" -eq 1 ] && name=$(generate_clean_name "${all_files[0]}")
