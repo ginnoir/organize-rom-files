@@ -1,35 +1,58 @@
-# organize-rom-files.sh
+# 🎮 organize-rom-files.sh
 
-This Bash script organizes disc-based video game ROMs into structured folders with optional playlist (`.m3u`/`.m3u8`) generation, metadata files, cue path rewriting, and more. It supports CHD, BIN/CUE, CCD/IMG/SUB, and ISO formats, and intelligently groups multi-disc games while optionally including single-disc and cartridge-based ROMs.
+A flexible and feature-rich Bash script to organize your retro game library!  
+Supports disc-based and cartridge-based formats for PlayStation, Sega, Nintendo, and more.
 
-## Features
+---
 
-- Detect and group multi-disc games
-- Optional support for single-disc and cartridge-based games
-- Generate `.m3u` or `.m3u8` playlists
-- Normalize region and disc naming
-- Rewrites `.cue` file `FILE` paths
-- Optional playlist and disc organization into per-game folders
-- Create `gamelist.xml` for EmulationStation and `.lpl` for RetroArch
-- Detect duplicate single-disc variants (e.g., v1.0 and v1.1) and skip playlist creation
-- Dry-run mode with preview of actions
-- Auto-disc number sorting in playlists
-- Logging support with `--log-output`
+## ✨ Features
 
-## Supported Formats
+- 📀 Auto-detect and group multi-disc games
+- 💾 Optional support for single-disc and cartridge-based ROMs
+- 🎵 Generate `.m3u` or `.m3u8` playlists for seamless disc switching
+- 🧹 Normalize filenames and regions (e.g., `(United States)` → `(USA)`)
+- 🛠️ Rewrites `.cue` `FILE` paths and validates existence
+- 📁 Organize into per-game folders or a central folder
+- 🗃️ Generate metadata:
+  - `gamelist.xml` for **EmulationStation**
+  - `.lpl` playlist for **RetroArch**
+- 🧠 Fuzzy multi-disc detection with `--aggressive-detection`
+- 📜 Dry-run support to preview all actions
+- 🪵 Optional logging with `--log-output`
 
+---
+
+## 📂 Supported Formats
+
+### 🕹️ Disc-Based
 - `.chd`
-- `.cue` (with `.bin`, `.wav`, `.mp3`, etc.)
-- `.ccd` (with `.img`, `.sub`)
+- `.cue` + `.bin` / `.wav` / `.mp3`
+- `.ccd` + `.img` / `.sub`
 - `.iso`
 
-## Usage
+### 🗃️ Cartridge-Based
+- `.sfc` / `.smc` (SNES)
+- `.nes` (NES)
+- `.gb`, `.gbc`, `.gba` (Game Boy family)
+- `.md`, `.gen` (Mega Drive / Genesis)
+
+---
+
+## 🚀 Usage
 
 ```bash
-bash organize_game_files.sh [options]
+bash organize-rom-files.sh [options]
 ```
 
-## Key Options
+### 🧰 Example
+
+```bash
+bash organize-rom-files.sh --include-single-disc --per-game-folders --normalize-discs --fix-cue-paths --generate_ra_metadata
+```
+
+---
+
+## ⚙️ Options
 
 ```
 --dry-run                 Preview actions without making changes
@@ -46,29 +69,29 @@ bash organize_game_files.sh [options]
 --fix-cue-paths           Fix `.cue` internal FILE paths
 --no-backups              Disable `.cue.bak` backups
 --sort-m3u-by-disc        Sort playlist entries by disc number
---aggressive-detection    Detect multi-disc games with inconsistent names
+--aggressive-detection    Use fuzzy matching to detect multi-disc sets
 --generate_es_metadata    Generate `gamelist.xml` for EmulationStation
 --generate_ra_metadata    Generate `.lpl` playlist files for RetroArch
-```
-
-## Example
-
-```bash
-bash organize_game_files.sh --include-single-disc --per-game-folders --normalize-discs --fix-cue-paths --generate_ra_metadata
+--help, -h                Show this help menu
 ```
 
 ---
 
-## Dry Run Preview
+## 🧪 Dry Run Output
 
-Includes:
-- Game title
-- Target folder
-- Playlist path
-- Sorted disc filenames
+Preview mode shows:
+- 🎮 Game name
+- 📁 Target folder
+- 📜 Playlist path
+- 📀 Sorted disc files
+- ⚠️ Warnings about skipped variant conflicts
 
 ---
 
-## License
+## 📄 License
 
 MIT
+
+---
+
+Happy organizing! 🕹️📚
