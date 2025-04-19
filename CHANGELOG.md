@@ -1,22 +1,15 @@
 # Changelog
 
-All notable changes to `organize_game_files.sh` are documented here.
-
-## [3.1]
-### Added
-- Smart folder routing for disc files:
-  - Multi-disc only → `gamediscs/` by default
-  - All games → `gamediscs/` if `--include-single-disc` is enabled
-  - All games → individual folders if `--per-game-folders` is enabled (overrides others)
-- Updated README and script banner with version 3.1
-
-## [3.0]
-### Added
-- Full support for cartridge ROMs via `--include-cartridges`
-- Cartridge metadata for RetroArch (`.lpl`) and EmulationStation (`gamelist.xml`)
-
-## [2.3]
-- Fuzzy multi-disc detection with preview and prompt (`--aggressive-detection`)
-...
-
-(Full version history in README)
+## v3.1 (2024-04)
+- Added full support for cartridge-based ROMs via `--include-cartridges`
+- Improved single-disc game handling: now requires `--include-single-disc`
+- Prevents playlist generation for multiple single-disc versions (e.g., v1.0, v1.1)
+- Added `--generate_es_metadata` and `--generate_ra_metadata` flags for EmulationStation and RetroArch
+- Rewrites `.cue` FILE paths and validates presence of referenced files
+- Improved fuzzy multi-disc detection with `--aggressive-detection`
+- Auto-sorts playlist entries by disc number using extracted numeric values
+- Added optional logging with `--log-output`
+- Added `--duplicate-m3u8` to create both `.m3u` and `.m3u8` files
+- Supports folder structure customization (`--per-game-folders`, `--move-playlists`)
+- Fixed bugs in help menu and flag parser
+- Enhanced dry-run preview formatting and clarity

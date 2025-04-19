@@ -1,123 +1,74 @@
-# organize-rom-files.sh
+# organize_game_files.sh
 
-A powerful Bash script to organize, validate, and generate playlists and metadata for disc-based and cartridge-based video game ROMs. Supports PlayStation, Sega CD, SNES, NES, GBA, and more.
+This Bash script organizes disc-based video game ROMs into structured folders with optional playlist (`.m3u`/`.m3u8`) generation, metadata files, cue path rewriting, and more. It supports CHD, BIN/CUE, CCD/IMG/SUB, and ISO formats, and intelligently groups multi-disc games while optionally including single-disc and cartridge-based ROMs.
 
----
+## Features
 
-## ✅ Feature Summary (v3.0)
+- Detect and group multi-disc games
+- Optional support for single-disc and cartridge-based games
+- Generate `.m3u` or `.m3u8` playlists
+- Normalize region and disc naming
+- Rewrites `.cue` file `FILE` paths
+- Optional playlist and disc organization into per-game folders
+- Create `gamelist.xml` for EmulationStation and `.lpl` for RetroArch
+- Detect duplicate single-disc variants (e.g., v1.0 and v1.1) and skip playlist creation
+- Dry-run mode with preview of actions
+- Auto-disc number sorting in playlists
+- Logging support with `--log-output`
 
-### 🎮 Supported File Types
+## Supported Formats
 
-**Disc-based:**
-- `.chd`, `.cue`, `.ccd`, `.iso`, `.bin`, `.img`, `.sub`
+- `.chd`
+- `.cue` (with `.bin`, `.wav`, `.mp3`, etc.)
+- `.ccd` (with `.img`, `.sub`)
+- `.iso`
 
-**Cartridge-based** (with `--include-cartridges`):
-- `.sfc`, `.smc`, `.nes`, `.gb`, `.gbc`, `.gba`, `.gen`, `.md`, `.bin`, `.n64`, `.z64`, `.v64`, `.nds`
+## Usage
 
----
-
-### 🧠 Core Behavior
-
-- Groups multi-disc games into `.m3u` or `.m3u8` playlists
-- Validates and rewrites `.cue` content
-- Automatically detects UTF-8 encoding
-- Moves companion files with `.cue` and `.ccd`
-- Detects and confirms fuzzy multi-disc sets (`--aggressive-detection`)
-
----
-
-### 📁 Folder Layout Options
-
-| Flag                   | Description |
-|------------------------|-------------|
-| `--per-game-folders`   | Create a folder for each multi-disc game |
-| `--move-playlists`     | Place `.m3u` inside game folders |
-| `--include-single-disc`| Treat single-disc games like multi-disc for folder/playlist handling |
-| `--include-cartridges` | Include ROMs like `.gba`, `.smc`, etc. for metadata and optional organization |
-|                        |                                            |
-| **Folder Routing Logic** |                                           |
-| (Default)              | Only multi-disc games are moved to `gamediscs/` |
-| `--include-single-disc` only | All games moved to `gamediscs/` |
-| `--per-game-folders`   | All disc games get their own folder (overrides others) |
-
----
-
-### 🧾 Naming Normalization
-
-| Flag                   | Description |
-|------------------------|-------------|
-| `--clean-names`        | Strip `(Disc X)`, `(v1.1)`, `(Final)` from playlist/folder names |
-| `--normalize-discs`    | Renames tags like `(Disk 1)` → `(Disc 1)` |
-| `--normalize-regions`  | Renames tags like `(US)` → `(USA)`, `(Europe)` → `(EU)` |
-
----
-
-### 📜 Playlist & Cue Support
-
-| Feature                | Description |
-|------------------------|-------------|
-| `--fix-cue-paths`      | Rewrites `FILE` paths in `.cue` to use only basenames |
-| `--sort-m3u-by-disc`   | Sorts playlist entries numerically by disc |
-| `--duplicate-m3u8`     | Creates both `.m3u` and `.m3u8` files |
-| `--no-backups`         | Disables `.cue.bak` creation when rewriting `.cue` |
-
----
-
-### 🧪 Validation & Logging
-
-| Feature                | Description |
-|------------------------|-------------|
-| Default `.cue` validation | Ensures all `FILE` entries exist |
-| Multi-FILE `.cue` handling | Prompts to skip or merge if multiple `FILE` lines exist |
-| `--verify-playlists`   | Launches `.m3u` in RetroArch (`--auto-load-core`, or prompt) |
-| `--log-output`         | Logs all actions to `generate_playlists.log` |
-
----
-
-### 📚 Metadata Generation
-
-| Flag                     | Output |
-|--------------------------|--------|
-| `--generate-es-metadata` | `gamelist.xml` |
-| `--generate-ra-metadata` | `.lpl` playlist |
-| Cartridge support        | Adds to `.lpl` and `gamelist.xml` even without `.m3u` |
-
----
-
-### 🧠 Advanced Grouping
-
-| Flag                      | Description |
-|---------------------------|-------------|
-| `--aggressive-detection`  | Fuzzy grouping of multi-disc games |
-|                           | Includes preview with confirmation |
-
----
-
-## 🧾 Changelog
-
-| Version | Features |
-|---------|----------|
-| **v1.0** | Initial support for `.chd` grouping and `.m3u` |
-| **v1.1** | Multi-format disc support |
-| **v1.2** | UTF-8 `.m3u8` detection |
-| **v1.3** | Disc and region normalization |
-| **v1.4** | Cue path rewriting |
-| **v1.5** | Cue validation and multi-FILE handling |
-| **v1.6** | Logging with `--log-output` |
-| **v1.7** | Playlist verification via RetroArch |
-| **v1.8** | Metadata output for EmulationStation and RetroArch |
-| **v1.9** | `.m3u8` duplication support |
-| **v2.0** | Script cleanup and refactoring |
-| **v2.1** | Bash completion support |
-| **v2.2** | Single-disc playlist option |
-| **v2.3** | Fuzzy multi-disc detection |
-| **v3.0** | Full cartridge ROM support with system-level metadata |
-| **v3.1** | Smart folder routing: `per-game` vs `gamediscs` based on flags |
-
----
-
-To use:
 ```bash
-chmod +x organize_game_files.sh
-./organize_game_files.sh --per-game-folders --generate-ra-metadata --include-cartridges
+bash organize_game_files.sh [options]
 ```
+
+## Key Options
+
+```
+--dry-run                 Preview actions without making changes
+--yes, -y                 Auto-confirm prompts
+--include-single-disc     Include single-disc games in playlists
+--include-cartridges      Include cartridge ROMs in organization
+--normalize-discs         Normalize disc names to "(Disc #)"
+--clean-names             Clean playlist and folder names (strip versions, etc.)
+--normalize-regions       Standardize region names (e.g., "(United States)" → "(USA)")
+--per-game-folders        Place each game in its own folder
+--move-playlists          Place playlists inside game folders
+--duplicate-m3u8          Create both .m3u and .m3u8 files
+--log-output              Save log of actions to `generate_playlists.log`
+--fix-cue-paths           Fix `.cue` internal FILE paths
+--no-backups              Disable `.cue.bak` backups
+--sort-m3u-by-disc        Sort playlist entries by disc number
+--aggressive-detection    Detect multi-disc games with inconsistent names
+--generate_es_metadata    Generate `gamelist.xml` for EmulationStation
+--generate_ra_metadata    Generate `.lpl` playlist files for RetroArch
+```
+
+## Example
+
+```bash
+bash organize_game_files.sh --include-single-disc --per-game-folders --normalize-discs --fix-cue-paths --generate_ra_metadata
+```
+
+---
+
+## Dry Run Preview
+
+Includes:
+- Game title
+- Target folder
+- Playlist path
+- Sorted disc filenames
+
+---
+
+## License
+
+MIT

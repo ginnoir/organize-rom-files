@@ -14,11 +14,22 @@ MOVE_PLAYLISTS=0
 CLEAN_NAMES=0
 NORMALIZE_REGIONS=0
 FIX_CUE_PATHS=0
-SORT_M3U_BY_DISC=0
+SORT_M3U_BY_DISC=1
 NO_BACKUPS=0
+INCLUDE_SINGLE_DISC=0
+INCLUDE_CARTRIDGES=0
+LOG_OUTPUT=0
+AGGRESSIVE_DETECTION=0
+VERIFY_PLAYLISTS=0
+GENERATE_ES_METADATA=0
+GENERATE_RA_METADATA=0
+LOG_FILE=organize-rom-files.log
+
+
 
 show_help() {
-cat <<EOF
+cat <<'EOF'
+}
 Usage: $0 [options]
 
 Organize video game disc files into structured folders with .m3u or .m3u8 playlists.
@@ -36,18 +47,24 @@ Options:
                           (US), (United States) → (USA)
                           (Europe) → (EU), (Japan) → (JP)
   --fix-cue-paths         Rewrites FILE entries in .cue files to just the local filename
-  --sort-m3u-by-disc      Sorts playlist entries by Disc number (e.g., Disc 1, Disc 2, ...)
   --no-backups            Do not create .cue.bak backups when rewriting .cue files
+  --include-single-disc    Include single-disc games in folder/playlist generation
+  --include-cartridges     Include cartridge-based ROMs in organization
+  --log-output             Write a log file of all actions to generate_playlists.log
+  --aggressive-detection   Use fuzzy matching for multi-disc grouping
+  --verify-playlists       Attempt to launch each .m3u file in RetroArch to test validity
+  --generate_es_metadata  Generate gamelist.xml files for use with EmulationStation
+  --generate_ra_metadata  Generate .lpl playlists for use with RetroArch
   --help, -h              Show this help menu
 
 Examples:
-  $0
-    Group multi-disc sets and move into 'multidisk/', keeping .m3u in root
+  organize-rom-file.sh
+    Group multi-disc sets and move into 'gamedisk/', keeping .m3u in root
 
-  $0 --per-game-folders --move-playlists
+  organize-rom-file.sh --per-game-folders --move-playlists
     Place each game in its own folder with .m3u inside
 
-  $0 --fix-cue-paths --sort-m3u-by-disc --normalize-discs --yes
+  organize-rom-file.sh --fix-cue-paths --sort-m3u-by-disc --normalize-discs --yes
     Fully normalize, clean, and correct cue playlists with no prompt
 EOF
 }
@@ -55,8 +72,14 @@ EOF
 # Parse args
 for arg in "$@"; do
     case "$arg" in
+        --auto-yes|-y) AUTO_YES=1 ;;
+        --include-single-disc) INCLUDE_SINGLE_DISC=1 ;;
+        --include-cartridges) INCLUDE_CARTRIDGES=1 ;;
+        --log-output) LOG_OUTPUT=1 ;;
+        --aggressive-detection) AGGRESSIVE_DETECTION=1 ;;
+        --verify-playlists) VERIFY_PLAYLISTS=1 ;;
+        --no-backups) NO_BACKUPS=1 ;;
         --dry-run) DRY_RUN=1 ;;
-        --yes|-y) AUTO_YES=1 ;;
         --normalize-discs) NORMALIZE_DISCS=1 ;;
         --per-game-folders) PER_GAME_FOLDERS=1 ;;
         --move-playlists) MOVE_PLAYLISTS=1 ;;
@@ -64,8 +87,11 @@ for arg in "$@"; do
         --normalize-regions) NORMALIZE_REGIONS=1 ;;
         --fix-cue-paths) FIX_CUE_PATHS=1 ;;
         --sort-m3u-by-disc) SORT_M3U_BY_DISC=1 ;;
+		--generate_es_metadata) GENERATE_ES_METADATA=1 ;;
+		--generate_ra_metadata) GENERATE_RA_METADATA=1 ;;
         --help|-h) show_help; exit 0 ;;
-
+	esac
+done
 
 check_dependencies() {
     local missing=0
@@ -77,10 +103,8 @@ check_dependencies() {
         fi
     done
     if [ "$VERIFY_PLAYLISTS" -eq 1 ] && ! command -v retroarch &>/dev/null; then
-    echo "[!] Warning: --verify-playlists was set but RetroArch is not installed."
-fi
-        echo "[!] Warning: --verify-playlists was set but neither RetroArch nor DuckStation is installed."
-    fi
+		echo "[!] Warning: --verify-playlists was set but RetroArch is not installed."
+		fi
     if [ "$missing" -eq 1 ]; then
         echo "[!] Please install the missing dependencies and try again."
         exit 1
@@ -93,11 +117,6 @@ if [ "$LOG_OUTPUT" -eq 1 ]; then
     exec > >(tee -a "$LOG_FILE") 2>&1
     echo "[*] Logging enabled: $LOG_FILE"
 fi
-
-        --no-backups) NO_BACKUPS=1 ;;
-        *) echo "Unknown argument: $arg"; echo "Use --help for usage."; exit 1 ;;
-    esac
-done
 
 normalize_region() {
     local name="$1"
@@ -209,55 +228,7 @@ verify_playlist() {
                 echo "[!] RetroArch failed to load with $core: $playlist"
             fi
         fi
-        else
-        echo "[!] No supported emulator found for verification."
     fi
-}
-
-
-generate_es_metadata() {
-    local name="$1"
-    local output_dir="$3"
-
-    echo "[*] Generating EmulationStation metadata for: $name"
-    mkdir -p "$output_dir"
-    cat <<EOF > "$output_dir/gamelist.xml"
-<gameList>
-  <game>
-    <path>./$name.m3u</path>
-    <name>$name</name>
-    <desc>Multi-disc game: $name</desc>
-  </game>
-</gameList>
-EOF
-}
-
-generate_ra_metadata() {
-    local name="$1"
-    local output_dir="$3"
-
-    echo "[*] Generating RetroArch .lpl metadata for: $name"
-    cat <<EOF > "$output_dir/$name.lpl"
-{
-  "version": "1.0",
-  "items": [
-    {
-      "path": "./$name.m3u",
-      "label": "$name",
-      "core_path": "DETECT",
-      "core_name": "DETECT",
-      "crc32": "00000000|crc",
-      "db_name": "Sony - PlayStation.lpl"
-    }
-  ]
-}
-EOF
-}
-
-
-  ]
-}
-EOF
 }
 
 
@@ -341,6 +312,59 @@ validate_cue_file() {
     return 0
 }
 
+generate_es_metadata() {
+    local name="$1"
+    local target_path="$2"
+    local output_dir="$3"
+
+    echo "[*] Generating EmulationStation metadata for: $name"
+    mkdir -p "$output_dir"
+    cat <<'EOF' > "$output_dir/gamelist.xml"
+<gameList>
+  <game>
+    <path>./$target_path</path>
+    <name>$name</name>
+    <desc>Game file: $name</desc>
+  </game>
+</gameList>
+EOF
+}
+
+generate_ra_metadata() {
+    local name="$1"
+    local target_path="$2"
+    local output_dir="$3"
+    local platform_hint="$4"
+
+    echo "[*] Generating RetroArch .lpl metadata for: $name"
+    local db_name="Sony - PlayStation.lpl"
+    case "$platform_hint" in
+        snes|sfc) db_name="Nintendo - Super Nintendo Entertainment System.lpl" ;;
+        nes) db_name="Nintendo - Nintendo Entertainment System.lpl" ;;
+        gb) db_name="Nintendo - Game Boy.lpl" ;;
+        gbc) db_name="Nintendo - Game Boy Color.lpl" ;;
+        gba) db_name="Nintendo - Game Boy Advance.lpl" ;;
+        md|genesis) db_name="Sega - Mega Drive - Genesis.lpl" ;;
+        *) db_name="Sony - PlayStation.lpl" ;;
+    esac
+
+    cat <<'EOF' > "$output_dir/$name.lpl"
+{
+  "version": "1.0",
+  "items": [
+    {
+      "path": "./$target_path",
+      "label": "$name",
+      "core_path": "DETECT",
+      "core_name": "DETECT",
+      "crc32": "00000000|crc",
+      "db_name": "$db_name"
+    }
+  ]
+}
+EOF
+}
+
 # Main file grouping
 DISC_PATTERN='\((Disc|Disk|CD)[ ]?[0-9]+\)'
 declare -A game_groups
@@ -404,15 +428,36 @@ if [ "$AGGRESSIVE_DETECTION" -eq 1 ]; then
 fi
 
 # Preview
-echo
 echo "[*] Found ${#game_groups[@]} game sets:"
 for key in "${!game_groups[@]}"; do
-    IFS=$'\n' read -r -d '' -a files < <(printf '%s\0' "${game_groups[$key]}" | sort -Vz)
-    [ "${#files[@]}" -lt 2 ] && continue
+
+	IFS=$'\n' read -r -d '' -a files < <(printf '%s\0' "${game_groups[$key]}")
+	# Skip single-disc games unless explicitly included
+	if [ "${#files[@]}" -lt 2 ] && [ "$INCLUDE_SINGLE_DISC" -ne 1 ]; then
+		continue
+	fi
+
+
+	# Check if this group has multiple single-disc versions (no (Disc #) in names)
+	if [[ "${#files[@]}" -gt 1 ]]; then
+		only_single_disc=1
+		for f in "${files[@]}"; do
+			if [[ "$f" =~ \(Disc[[:space:]]*[0-9]+\) ]]; then
+				only_single_disc=0
+				break
+			fi
+		done
+		if [[ "$only_single_disc" -eq 1 ]]; then
+			echo
+			echo "[!] Multiple single-disc variants found for '$key'. Skipping playlist generation."
+			continue
+		fi
+	fi
+
 
     name="$key"
     [ "$CLEAN_NAMES" -eq 1 ] && name=$(generate_clean_name "${files[0]}")
-    target_dir=$( [ "$PER_GAME_FOLDERS" -eq 1 ] && echo "./$name" || echo "./multidisk" )
+    target_dir=$( [ "$PER_GAME_FOLDERS" -eq 1 ] && echo "./$name" || echo "./gamedisk" )
     playlist_ext=$(requires_utf8 "${files[@]}" && echo "m3u8" || echo "m3u")
     playlist_path=$( [ "$MOVE_PLAYLISTS" -eq 1 ] && [ "$PER_GAME_FOLDERS" -eq 1 ] && echo "$target_dir/$name.$playlist_ext" || echo "./$name.$playlist_ext" )
 
@@ -421,14 +466,21 @@ for key in "${!game_groups[@]}"; do
     echo "[Game:]        $key"
     echo "[Folder:]      $target_dir"
     echo "[Playlist:]    $playlist_path"
-    echo "[Files:]"
-    for f in "${files[@]}"; do echo "    - $f"; done
+    echo "[Files (sorted for playlist):]"
+	mapfile -t sorted_files < <(
+		for f in "${files[@]}"; do
+			disc=$(echo "$f" | grep -oiE 'Disc ?[0-9]+' | grep -oE '[0-9]+' || echo 0)
+			printf "%02d|%s\n" "$disc" "$f"
+		done | sort -n | cut -d'|' -f2-
+	)
+for f in "${sorted_files[@]}"; do echo "    - $f"; done
+
 done
 
 [ "$DRY_RUN" -eq 1 ] && echo && echo "[✓] Dry run complete." && exit 0
 [ "$AUTO_YES" -ne 1 ] && read -rp "Proceed with these changes? [y/N] " confirm && [[ "$confirm" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 1; }
 
-[ "$PER_GAME_FOLDERS" -eq 0 ] && mkdir -p "./multidisk"
+[ "$PER_GAME_FOLDERS" -eq 0 ] && mkdir -p "./gamedisk"
 echo; echo "[*] Processing..."
 
 for key in "${!game_groups[@]}"; do
@@ -437,7 +489,7 @@ for key in "${!game_groups[@]}"; do
 
     name="$key"
     [ "$CLEAN_NAMES" -eq 1 ] && name=$(generate_clean_name "${all_files[0]}")
-    target_dir=$( [ "$PER_GAME_FOLDERS" -eq 1 ] && echo "./$name" || echo "./multidisk" )
+    target_dir=$( [ "$PER_GAME_FOLDERS" -eq 1 ] && echo "./$name" || echo "./gamedisk" )
     mkdir -p "$target_dir"
 
     # Prefer .cue/.ccd, fall back to .bin/.img/.iso/.chd
@@ -450,8 +502,13 @@ for key in "${!game_groups[@]}"; do
     done
 
     if [ "$SORT_M3U_BY_DISC" -eq 1 ]; then
-        mapfile -t playlist_files < <(printf '%s\n' "${playlist_files[@]}" | sort -V -t'(' -k2)
-    fi
+		mapfile -t playlist_files < <(
+			for f in "${playlist_files[@]}"; do
+				disc=$(echo "$f" | grep -oiE 'Disc ?[0-9]+' | grep -oE '[0-9]+' || echo 0)
+				printf "%02d|%s\n" "$disc" "$f"
+			done | sort -n | cut -d'|' -f2-
+		)
+	fi
 
     playlist_ext=$(requires_utf8 "${playlist_files[@]}" && echo "m3u8" || echo "m3u")
     playlist_path=$( [ "$MOVE_PLAYLISTS" -eq 1 ] && [ "$PER_GAME_FOLDERS" -eq 1 ] && echo "$target_dir/$name.$playlist_ext" || echo "./$name.$playlist_ext" )
@@ -465,7 +522,7 @@ echo "$rel_path" >> "$playlist_path"
         duplicate_path="${playlist_path%.m3u}.m3u8"
         echo "$rel_path" >> "$duplicate_path"
     fi
-    [ "$VERIFY_PLAYLISTS" -eq 1 ] && verify_playlist "$playlist_path"
+    [ "${VERIFY_PLAYLISTS:-0}" -eq 1 ] && verify_playlist "$playlist_path"
     [ "$GENERATE_ES_METADATA" -eq 1 ] && generate_es_metadata "$name" "$playlist_path" "$target_dir"
     [ "$GENERATE_RA_METADATA" -eq 1 ] && generate_ra_metadata "$name" "$playlist_path" "$target_dir"
     done
@@ -486,33 +543,5 @@ echo "$rel_path" >> "$playlist_path"
         fi
     done
 done
-
-
-# Metadata generation for standalone cartridge ROMs
-if [ "$GENERATE_ES_METADATA" -eq 1 ] || [ "$GENERATE_RA_METADATA" -eq 1 ]; then
-    for rom in *.{sfc,smc,nes,gb,gbc,gen,md,bin,gba,n64,z64,v64,nds}; do
-        [ -f "$rom" ] || continue
-        base="$(basename "$rom")"
-        name="${base%.*}"
-        system="$(get_system_for_rom "$rom")"
-
-        [ "$GENERATE_ES_METADATA" -eq 1 ] && generate_es_metadata "$name" "$rom" "."
-        if [ "$GENERATE_RA_METADATA" -eq 1 ]; then
-            lpl_path="./${system}.lpl"
-            echo "[*] Adding to $lpl_path"
-            cat <<EOF >> "$lpl_path"
-{
-  "path": "./$base",
-  "label": "$name",
-  "core_path": "DETECT",
-  "core_name": "DETECT",
-  "crc32": "00000000|crc",
-  "db_name": "$system.lpl"
-},
-EOF
-        fi
-    done
-fi
-
 
 echo "[✓] Done."
